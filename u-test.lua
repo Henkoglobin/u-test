@@ -135,7 +135,7 @@ end
 local function make_type_checker(typename)
     api["is_" .. typename] = function (maybe_type, msg)
         if type(maybe_type) ~= typename then
-            fail("got " .. tostring(maybe_type) .. " instead of " .. typename, msg, 4)
+            fail("got " .. tostring(type(maybe_type)) .. " (" .. tostring(maybe_type) .. ")" .. " instead of " .. typename, msg, 4)
         end
     end
 end
