@@ -64,9 +64,12 @@ local function log(msg)
     end
 end
 
-local function fail(msg, start_frame)
+local function fail(msg, more, start_frame)
     failed = true
     print("Fail: " .. msg)
+    if more then
+        print("Reason: " .. more)
+    end
     trace(start_frame or 4)
 end
 
@@ -93,46 +96,46 @@ end
 
 -- PUBLIC API -----------------------------------------------------------------
 local api = { test_suite_name = "__root", skip = false }
-api.equal = function (l, r)
+api.equal = function (l, r, msg)
     if l ~= r then
-        fail(tostring(l) .. " ~= " .. tostring(r))
+        fail(tostring(l) .. " ~= " .. tostring(r), msg)
     end
 end
 
-api.not_equal = function (l, r)
+api.not_equal = function (l, r, msg)
     if l == r then
-        fail(tostring(l) .. " == " .. tostring(r))
+        fail(tostring(l) .. " == " .. tostring(r), msg)
     end
 end
 
-api.almost_equal = function (l, r, diff)
+api.almost_equal = function (l, r, diff, msg)
     if require("math").abs(l - r) > diff then
-        fail("|" .. tostring(l) .. " - " .. tostring(r) .."| > " .. tostring(diff))
+        fail("|" .. tostring(l) .. " - " .. tostring(r) .."| > " .. tostring(diff), msg)
     end
 end
 
-api.is_false = function (maybe_false)
+api.is_false = function (maybe_false, msg)
     if maybe_false or type(maybe_false) ~= "boolean" then
-        fail("got " .. tostring(maybe_false) .. " instead of false")
+        fail("got " .. tostring(maybe_false) .. " instead of false", msg)
     end
 end
 
-api.is_true = function (maybe_true)
+api.is_true = function (maybe_true, msg)
     if not maybe_true or type(maybe_true) ~= "boolean" then
-        fail("got " .. tostring(maybe_true) .. " instead of true")
+        fail("got " .. tostring(maybe_true) .. " instead of true", msg)
     end
 end
 
-api.is_not_nil = function (maybe_not_nil)
+api.is_not_nil = function (maybe_not_nil, msg)
     if type(maybe_not_nil) == "nil" then
-        fail("got nil")
+        fail("got nil", msg)
     end
 end
 
 local function make_type_checker(typename)
-    api["is_" .. typename] = function (maybe_type)
+    api["is_" .. typename] = function (maybe_type, msg)
         if type(maybe_type) ~= typename then
-            fail("got " .. tostring(maybe_type) .. " instead of " .. typename, 4)
+            fail("got " .. tostring(maybe_type) .. " instead of " .. typename, msg, 4)
         end
     end
 end
