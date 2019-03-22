@@ -20,6 +20,7 @@ t.all_assertions = function ()
     t.is_table({})
     t.is_function(function() end)
     t.is_thread(coroutine.create(function () end))
+    t.error_raised(function() error("") end)
 end
 
 local function fail_all()
@@ -37,6 +38,7 @@ local function fail_all()
     t.is_table(nil, "Should be a table")
     t.is_function(coroutine.create(function () end), "Should be a function")
     t.is_thread(function() end, "Should be a thread")
+    t.error_raised(function() end, "Should throw an error")
 end
 
 t.all_assertions_failed = function ()
@@ -89,5 +91,47 @@ t.tests_result = function()
         t.equal(nfailed, 2)
     end
 end
+
+t.test_error_raised.when_error_is_raised = function()
+    t.error_raised(function() error("a custom error") end)
+end
+
+t.test_error_raised.with_error_message = function()
+    t.error_raised(function() error("a custom error") end,
+        "custom error")
+end
+
+t.test_error_raised.with_wrong_error_message = function()
+    t.error_raised(function() error("another error") end,
+        "custom error")
+end
+
+t.test_error_raised.when_error_is_not_raised = function()
+    t.error_raised(function() end)
+end
+
+local function has_key(tab, key)
+    local msg
+    if type(tab) ~= "table" then
+        msg = "Expected first argument to be table"
+        return false, msg
+    end
+
+    if tab[key] == nil then
+        msg = "Expected table to have key '"..tostring(key).."'"
+        return false, msg
+    end
+
+    return true
+end
+
+t.register_assert("has_key", has_key)
+
+t.test_if_table_has_key = function(tab, key)
+    t.has_key(tab, key)
+end
+
+t.test_if_table_has_key({ name = "John" }, "name")
+t.test_if_table_has_key({ name = "John" }, "age")
 
 t.summary()

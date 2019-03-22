@@ -7,8 +7,8 @@ defining test cases, test suites, set of build-in assertions, configurable tests
 ### Top features that are not present in other lua test frameworks
 1. Nice command line interface (like gtest).
 1. Backtrace in failed assertions.
-1. Ordered test execution (as written in source file). 
-1. Support 5.1/5.2/5.3.
+1. Ordered test execution (as written in source file).
+1. Support 5.1/5.2/5.3 and LuaJIT.
 1. Select particular tests with regexp.
 
 ### How to install
@@ -27,14 +27,20 @@ $ luarocks install u-test
 ```lua
 local test = require 'u-test'
 
--- This is how you can crete your first test case 
+-- You can use 'assert' to check invariants.
+test.hello_world = function ()
+    test.assert(true)
+    test.assert(1 ~= 2)
+end
+
+-- This is how you can create your first test case
 test.addition = function ()
     test.equal(1 + 1, 2)
     test.not_equal("1 + 1", "2")
     test.almost_equal(1 + 1, 2.1, 0.2)
 end
 
--- You can enable custom start_up and tear_down actions 
+-- You can enable custom start_up and tear_down actions
 -- Thse actions will be invoked:
 -- start_up - before test case
 -- tear_down - after test case
@@ -58,21 +64,14 @@ test.string.find = function ()
     test.is_not_nil(string.find("u-test", "u"))
 end
 
--- For Lua 5.1 you can declare test case with parameters by adding "_p" suffix
-test.string.starts_with_p = function (str, prefix)
+-- You can declare test case with parameters
+test.string.starts_with = function (str, prefix)
     test.equal(string.find(str, prefix), 1)
 end
 
 -- Then, run it with multiple parameters
-test.string.starts_with_p("Lua rocks", "Lua")
-test.string.starts_with_p("Wow", "Wow")
-
--- For Lua > 5.1 you can create parameterised test
--- just assigning function with parameters
-test.string.newer_parameterization = function(param, ...) end
-
--- And call them just like a regular function
-test.string.newer_parameterization(1, 2, 3)
+test.string.starts_with("Lua rocks", "Lua")
+test.string.starts_with("Wow", "Wow")
 
 local global_table = {}
 
@@ -80,7 +79,7 @@ local global_table = {}
 test.table.start_up = function ()
     global_table = { 1, 2, "three", 4, "five" }
 end
-test.table.tear_down = function () 
+test.table.tear_down = function ()
     global_table = {}
 end
 
@@ -88,7 +87,7 @@ test.table.concat = function ()
     test.equal(table.concat(global_table, ", "), "1, 2, three, 4, five")
 end
 
--- you can disabe broken test case like this
+-- you can disable broken test case like this
 test.broken.skip = true
 test.broken.bad_case = function ()
     test.equal(1, 2)
@@ -106,6 +105,7 @@ test.summary()
 
 ### List of all assertions
 ```lua
+test.assert(true)
 test.equal(1, 1)
 test.not_equal(1, 2)
 test.is_false(false)
@@ -119,4 +119,21 @@ test.is_number(3)
 test.is_table({"I am table now"})
 test.is_function(function () end)
 test.is_userdata(userdata_value)
+test.error_raised(function() error("error 10") end, "error 10")
+```
+
+### Custom assertions
+```lua
+local function is_elephant(animal)
+    if animal ~= "elephant" then
+        local failure_msg = "Expected elephant, but got "..tostring(animal)
+        return false, msg
+    end
+
+    return true
+end
+
+test.register_assert("is_elephant", is_elephant)
+
+test.is_elephant("dolphin") -- fails!
 ```
