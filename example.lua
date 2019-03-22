@@ -1,13 +1,19 @@
 local test = require 'u-test'
 
--- This is how you can crete your first test case 
+-- You can use 'assert' to check invariants.
+test.hello_world = function ()
+    test.assert(true)
+    test.assert(1 ~= 2)
+end
+
+-- This is how you can create your first test case
 test.addition = function ()
     test.equal(1 + 1, 2)
     test.not_equal("1 + 1", "2")
     test.almost_equal(1 + 1, 2.1, 0.2)
 end
 
--- You can enable custom start_up and tear_down actions 
+-- You can enable custom start_up and tear_down actions
 -- Thse actions will be invoked:
 -- start_up - before test case
 -- tear_down - after test case
@@ -46,7 +52,7 @@ local global_table = {}
 test.table.start_up = function ()
     global_table = { 1, 2, "three", 4, "five" }
 end
-test.table.tear_down = function () 
+test.table.tear_down = function ()
     global_table = {}
 end
 
@@ -54,11 +60,29 @@ test.table.concat = function ()
     test.equal(table.concat(global_table, ", "), "1, 2, three, 4, five")
 end
 
--- you can disabe broken test case like this
+-- you can disable broken test case like this
 test.broken.skip = true
 test.broken.bad_case = function ()
     test.equal(1, 2)
     there_is_no_such_function()
+end
+
+-- you can create custom assertions
+local function is_elephant(animal)
+    if animal ~= "elephant" then
+        local failure_msg = "Expected elephant, but got "..tostring(animal)
+        return false, msg
+    end
+
+    return true
+end
+
+-- register it
+test.register_assert("is_elephant", is_elephant)
+
+test.custom_assertion = function ()
+    -- you can use it like any other u-test function
+    test.is_elephant("elephant")
 end
 
 -- obtain total number of tests and numer of failed tests

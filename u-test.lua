@@ -1,4 +1,4 @@
--- COMAND LINE ----------------------------------------------------------------
+-- COMMAND LINE ----------------------------------------------------------------
 --local function print_help()
 --    print "Usage: target.lua [options] [regex]"
 --    print "\t-h show this message"
@@ -43,7 +43,7 @@ local failed_tag   = red    "[  FAILED  ]"
 
 local ntests = 0
 local failed = false
-local nfailed = 0
+local failed_list = {}
 
 local function trace(start_frame)
     print "Trace:"
@@ -75,17 +75,17 @@ local function fail(msg, more, start_frame)
     trace(start_frame or 4)
 end
 
-local function stringize_var_arg(varg, ...)
-    if varg then
-        local rest = stringize_var_arg(...)
-        if rest ~= "" then
-            return tostring(varg) .. ", ".. rest
+local function stringize_var_arg(...)
+    local args = { n = select("#", ...), ... }
+    local result = {}
+    for i = 1, args.n do
+        if type(args[i]) == 'string' then
+            result[i] = '"' .. tostring(args[i]) .. '"'
         else
-            return tostring(varg)
+            result[i] = tostring(args[i])
         end
-    else
-        return ""
     end
+    return table.concat(result, ", ")
 end
 
 local function test_pretty_name(suite_name, test_name)
@@ -98,6 +98,13 @@ end
 
 -- PUBLIC API -----------------------------------------------------------------
 local api = { test_suite_name = "__root", skip = false }
+
+api.assert = function (cond, msg)
+    if not cond then
+        fail("assertion " .. tostring(cond) .. " failed", msg)
+    end
+end
+
 api.equal = function (l, r, msg)
     if l ~= r then
         fail(tostring(l) .. " ~= " .. tostring(r), msg)
@@ -132,6 +139,30 @@ api.is_not_nil = function (maybe_not_nil, msg)
     if type(maybe_not_nil) == "nil" then
         fail("got nil", msg)
     end
+end
+
+api.error_raised = function (f, error_message, ...)
+    local status, err = pcall(f, ...)
+    if status == true then
+        fail("error not raised")
+    else
+        if error_message ~= nil then
+            -- we set "plain" to true to avoid pattern matching in string.find
+            if err:find(error_message, 1, true) == nil then
+                fail("'" .. error_message .. "' not found in error '" .. tostring(err) .. "'")
+            end
+        end
+    end
+end
+
+api.register_assert = function(assert_name, assert_func)
+    rawset(api, assert_name, function(...)
+        local result, msg = assert_func(...)
+        if not result then
+            msg = msg or "Assertion "..assert_name.." failed"
+            fail(msg)
+        end
+    end)
 end
 
 local function make_type_checker(typename)
@@ -192,23 +223,27 @@ local function run_test(test_suite, test_name, test_function, ...)
                             os.difftime(stop, start)))
 
     if is_test_failed then
-        nfailed = nfailed + 1
+        table.insert(failed_list, full_test_name)
     end
 end
 
 api.summary = function ()
     log(done_tag)
+    local nfailed = #failed_list
     if nfailed == 0 then
         log(passed_tag .. " " .. ntests .. " test(s)")
         os.exit(0)
     else
-        log(failed_tag .. " " .. nfailed .. " out of " .. ntests)
+        log(failed_tag .. " " .. nfailed .. " out of " .. ntests .. ":")
+        for _, test_name in ipairs(failed_list) do
+            log(failed_tag .. "\t" .. test_name)
+        end
         os.exit(1)
     end
 end
 
 api.result = function ( ... )
-    return ntests, nfailed
+    return ntests, #failed_list
 end
 
 local default_start_up = function () end
@@ -243,9 +278,10 @@ local function lookup_test_with_params(suite, test_name)
                 , all_test_cases[suite_name][test_name], ...)
         end
     else
-        nfailed = nfailed + 1
+        local full_test_name = test_pretty_name(suite_name, test_name)
+        table.insert(failed_list, full_test_name)
         ntests = ntests + 1
-        log(fail_tag .. " No " .. test_pretty_name(suite_name, test_name) .. " parametrized test case!")
+        log(fail_tag .. " No " .. full_test_name .. " parametrized test case!")
     end
 end
 
